@@ -20,16 +20,9 @@ if ! bashio::fs.directory_exists "/data/meshcentral/meshcentral-data"; then
   mkdir -p /data/meshcentral/meshcentral-data
 fi
 
-# Create or override config.json
-declare meshcentral_config
-meshcentral_config=$(bashio::config "meshcentral_config")
-
-if bashio::var.has_value "${meshcentral_config}"; then
-  bashio::log.info "Writing MeshCentral configuration from add-on options..."
-  printf '%s\n' "${meshcentral_config}" > /data/meshcentral/meshcentral-data/config.json
-elif ! bashio::fs.file_exists "/data/meshcentral/meshcentral-data/config.json"; then
-  bashio::log.info "Creating initial MeshCentral configuration with web, MPS, relay and agent ports..."
-  cat > /data/meshcentral/meshcentral-data/config.json <<EOF
+# Always write a known-good default config.json on startup
+bashio::log.info "Writing default MeshCentral configuration..."
+cat > /data/meshcentral/meshcentral-data/config.json <<EOF
 {
   "settings": {
     "port": 80,
@@ -44,10 +37,16 @@ elif ! bashio::fs.file_exists "/data/meshcentral/meshcentral-data/config.json"; 
     "agentPong": 60,
     "minify": true,
     "webRTC": true
+  },
+  "domains": {
+    "": {
+      "title": "MeshCentral",
+      "minify": true,
+      "newAccounts": true
+    }
   }
 }
 EOF
-fi
 
 # Set data directory
 export MESHCENTRAL_DATA="/data/meshcentral/meshcentral-data"
