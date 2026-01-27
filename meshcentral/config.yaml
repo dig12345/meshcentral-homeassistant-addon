@@ -1,6 +1,6 @@
 ---
 name: MeshCentral
-version: dev
+version: 0.1.0
 slug: meshcentral
 description: Web-based remote computer management server
 url: https://github.com/Ylianst/MeshCentral
