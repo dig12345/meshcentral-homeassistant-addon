@@ -1,0 +1,22 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant Community Add-on: MeshCentral
+# Creates data directories if they don't exist
+# ==============================================================================
+
+if ! bashio::fs.directory_exists "/data/meshcentral"; then
+  mkdir -p /data/meshcentral
+fi
+
+if ! bashio::fs.directory_exists "/data/meshcentral/data"; then
+  mkdir -p /data/meshcentral/data
+fi
+
+if ! bashio::fs.directory_exists "/data/meshcentral/meshcentral-data"; then
+  mkdir -p /data/meshcentral/meshcentral-data
+fi
+
+if ! bashio::fs.directory_exists "/data/meshcentral/meshcentral-files"; then
+  mkdir -p /data/meshcentral/meshcentral-files
+fi

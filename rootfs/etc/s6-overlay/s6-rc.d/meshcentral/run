@@ -1,0 +1,54 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant Community Add-on: MeshCentral
+# Starts MeshCentral
+# ==============================================================================
+bashio::log.info "Starting MeshCentral..."
+
+export NODE_ENV=production
+
+# Set log level if configured
+declare log_level
+log_level=$(bashio::config "log_level")
+if bashio::var.has_value "${log_level}"; then
+  export DEBUG="${log_level}"
+fi
+
+# Create or override config.json
+declare meshcentral_config
+meshcentral_config=$(bashio::config "meshcentral_config")
+
+if bashio::var.has_value "${meshcentral_config}"; then
+  bashio::log.info "Writing MeshCentral configuration from add-on options..."
+  printf '%s\n' "${meshcentral_config}" > /data/meshcentral/meshcentral-data/config.json
+elif ! bashio::fs.file_exists "/data/meshcentral/meshcentral-data/config.json"; then
+  bashio::log.info "Creating initial MeshCentral configuration with web, MPS, relay and agent ports..."
+  cat > /data/meshcentral/meshcentral-data/config.json <<EOF
+{
+  "settings": {
+    "port": 80,
+    "redirPort": 0,
+    "exactPorts": true,
+    "mpsPort": 44330,
+    "relayPort": 453,
+    "agentPort": 1234,
+    "allowLoginToken": true,
+    "allowFraming": true,
+    "agentPing": 60,
+    "agentPong": 60,
+    "minify": true,
+    "webRTC": true
+  }
+}
+EOF
+fi
+
+# Set data directory
+export MESHCENTRAL_DATA="/data/meshcentral/meshcentral-data"
+export MESHCENTRAL_FILES="/data/meshcentral/meshcentral-files"
+
+cd /usr/local/lib/node_modules/meshcentral \
+    || bashio::exit.nok "Could not change directory to MeshCentral"
+
+exec node meshcentral.js --datapath /data/meshcentral/meshcentral-data

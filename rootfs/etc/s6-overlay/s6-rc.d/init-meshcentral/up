@@ -1,0 +1,3 @@
+#!/command/with-contenv bashio
+# oneshot service for initializing MeshCentral data directories
+

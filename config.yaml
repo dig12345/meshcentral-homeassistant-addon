@@ -1,0 +1,31 @@
+---
+name: MeshCentral
+version: dev
+slug: meshcentral
+description: Web-based remote computer management server
+url: https://github.com/Ylianst/MeshCentral
+ingress: true
+ingress_stream: true
+panel_title: MeshCentral
+panel_icon: mdi:remote-desktop
+startup: system
+init: false
+timeout: 30
+arch:
+  - aarch64
+  - amd64
+map:
+  - share:rw
+schema:
+  log_level: list(trace|debug|info|notice|warning|error|fatal)?
+  meshcentral_config: str?
+ports:
+  80/tcp: 8877
+  44330/tcp: null
+  453/tcp: null
+  1234/tcp: null
+ports_description:
+  80/tcp: MeshCentral HTTP port
+  44330/tcp: MeshCentral MPS port
+  453/tcp: MeshCentral relay port
+  1234/tcp: MeshCentral agent port
