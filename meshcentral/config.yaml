@@ -1,6 +1,6 @@
 ---
 name: MeshCentral
-version: 0.1.13
+version: 0.1.14
 slug: meshcentral
 description: Web-based remote computer management server
 url: https://github.com/Ylianst/MeshCentral
@@ -16,12 +16,10 @@ schema:
   log_level: list(trace|debug|info|notice|warning|error|fatal)?
   meshcentral_config: str?
 ports:
-  443/tcp: 8877
-  44330/tcp: null
-  453/tcp: null
-  1234/tcp: null
+  44433/tcp: 44433
+  44431/tcp: 44431
+  44432/tcp: 44432
 ports_description:
-  443/tcp: MeshCentral HTTPS port
-  44330/tcp: MeshCentral MPS port
-  453/tcp: MeshCentral relay port
-  1234/tcp: MeshCentral agent port
+  44433/tcp: MeshCentral HTTPS port
+  44431/tcp: MeshCentral redirect port
+  44432/tcp: MeshCentral MPS port
