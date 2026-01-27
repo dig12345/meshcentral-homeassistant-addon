@@ -5,18 +5,21 @@
 # Creates data directories if they don't exist
 # ==============================================================================
 
-if ! bashio::fs.directory_exists "/data/meshcentral"; then
-  mkdir -p /data/meshcentral
+if ! bashio::fs.directory_exists "/share/meshcentral"; then
+  mkdir -p /share/meshcentral
 fi
 
-if ! bashio::fs.directory_exists "/data/meshcentral/data"; then
-  mkdir -p /data/meshcentral/data
+if ! bashio::fs.directory_exists "/share/meshcentral/meshcentral-data"; then
+  mkdir -p /share/meshcentral/meshcentral-data
 fi
 
-if ! bashio::fs.directory_exists "/data/meshcentral/meshcentral-data"; then
-  mkdir -p /data/meshcentral/meshcentral-data
+if ! bashio::fs.directory_exists "/share/meshcentral/meshcentral-files"; then
+  mkdir -p /share/meshcentral/meshcentral-files
 fi
 
-if ! bashio::fs.directory_exists "/data/meshcentral/meshcentral-files"; then
-  mkdir -p /data/meshcentral/meshcentral-files
+if ! bashio::fs.directory_exists "/share/meshcentral/meshcentral-backups"; then
+  mkdir -p /share/meshcentral/meshcentral-backups
 fi
+
+# Ensure proper permissions for MeshCentral data directories
+chmod -R 755 /share/meshcentral 2>/dev/null || true
