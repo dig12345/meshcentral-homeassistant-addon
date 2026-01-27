@@ -10,7 +10,6 @@ configuration:
       Full contents of meshcentral-data/config.json. If set, it completely
       replaces the generated default. Leave empty to use the built-in default.
 network:
-  80/tcp: MeshCentral HTTP port
-  44330/tcp: MeshCentral MPS port
-  453/tcp: MeshCentral relay port
-  1234/tcp: MeshCentral agent port
+  44433/tcp: MeshCentral HTTPS port
+  44431/tcp: MeshCentral redirect port
+  44432/tcp: MeshCentral MPS port
