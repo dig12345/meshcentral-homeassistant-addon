@@ -1,13 +1,9 @@
 ---
 name: MeshCentral
-version: 0.1.6
+version: 0.1.7
 slug: meshcentral
 description: Web-based remote computer management server
 url: https://github.com/Ylianst/MeshCentral
-ingress: true
-ingress_stream: true
-panel_title: MeshCentral
-panel_icon: mdi:remote-desktop
 startup: system
 init: false
 timeout: 30
