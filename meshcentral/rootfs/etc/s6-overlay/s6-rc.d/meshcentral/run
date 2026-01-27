@@ -15,6 +15,11 @@ if bashio::var.has_value "${log_level}"; then
   export DEBUG="${log_level}"
 fi
 
+# Ensure data directory exists (defensive in case init step failed)
+if ! bashio::fs.directory_exists "/data/meshcentral/meshcentral-data"; then
+  mkdir -p /data/meshcentral/meshcentral-data
+fi
+
 # Create or override config.json
 declare meshcentral_config
 meshcentral_config=$(bashio::config "meshcentral_config")
