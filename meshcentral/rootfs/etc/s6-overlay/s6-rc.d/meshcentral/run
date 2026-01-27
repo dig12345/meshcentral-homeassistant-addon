@@ -20,9 +20,10 @@ if ! bashio::fs.directory_exists "/data/meshcentral/meshcentral-data"; then
   mkdir -p /data/meshcentral/meshcentral-data
 fi
 
-# Always write a known-good default config.json on startup
-bashio::log.info "Writing default MeshCentral configuration..."
-cat > /data/meshcentral/meshcentral-data/config.json <<EOF
+# Initialize default config.json only if it does not exist or is empty
+if [ ! -s "/data/meshcentral/meshcentral-data/config.json" ]; then
+  bashio::log.info "Writing default MeshCentral configuration..."
+  cat > /data/meshcentral/meshcentral-data/config.json <<EOF
 {
   "settings": {
     "port": 80,
@@ -47,6 +48,9 @@ cat > /data/meshcentral/meshcentral-data/config.json <<EOF
   }
 }
 EOF
+else
+  bashio::log.info "Using existing MeshCentral configuration..."
+fi
 
 # Set data directory
 export MESHCENTRAL_DATA="/data/meshcentral/meshcentral-data"
