@@ -1,6 +1,6 @@
 ---
 name: MeshCentral
-version: 0.1.10
+version: 0.1.11
 slug: meshcentral
 description: Web-based remote computer management server
 url: https://github.com/Ylianst/MeshCentral
@@ -17,7 +17,7 @@ schema:
   log_level: list(trace|debug|info|notice|warning|error|fatal)?
   meshcentral_config: str?
 ports:
-  80/tcp: 8877
+  80/tcp: 443
   44330/tcp: null
   453/tcp: null
   1234/tcp: null
