@@ -15,9 +15,13 @@ if bashio::var.has_value "${log_level}"; then
   export DEBUG="${log_level}"
 fi
 
-# Ensure data directory exists (defensive in case init step failed)
+# Ensure data directories exist (defensive in case init step failed)
 if ! bashio::fs.directory_exists "/data/meshcentral/meshcentral-data"; then
   mkdir -p /data/meshcentral/meshcentral-data
+fi
+
+if ! bashio::fs.directory_exists "/data/meshcentral/meshcentral-backups"; then
+  mkdir -p /data/meshcentral/meshcentral-backups
 fi
 
 # Initialize default config.json only if it does not exist or is empty
@@ -43,7 +47,11 @@ if [ ! -s "/data/meshcentral/meshcentral-data/config.json" ]; then
     "": {
       "title": "MeshCentral",
       "minify": true,
-      "newAccounts": true
+      "newAccounts": true,
+      "myServer": {
+        "Backup": true,
+        "Restore": true
+      }
     }
   }
 }
