@@ -1,6 +1,6 @@
 ---
 name: MeshCentral
-version: 0.1.9
+version: 0.1.10
 slug: meshcentral
 description: Web-based remote computer management server
 url: https://github.com/Ylianst/MeshCentral
@@ -12,6 +12,7 @@ arch:
   - amd64
 map:
   - share:rw
+  - backup:rw
 schema:
   log_level: list(trace|debug|info|notice|warning|error|fatal)?
   meshcentral_config: str?
