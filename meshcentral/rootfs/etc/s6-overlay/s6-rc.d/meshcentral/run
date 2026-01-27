@@ -30,7 +30,7 @@ if [ ! -s "/backup/meshcentral/meshcentral-data/config.json" ]; then
   cat > /data/meshcentral/meshcentral-data/config.json <<EOF
 {
   "settings": {
-    "port": 80,
+    "port": 443,
     "redirPort": 0,
     "exactPorts": true,
     "mpsPort": 44330,
