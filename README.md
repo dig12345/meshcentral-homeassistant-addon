@@ -7,10 +7,10 @@ MeshCentral is a web-based remote monitoring and management solution that provid
 ### Features
 
 - MeshCentral web UI served from the add-on
-- Optional MPS, relay, and agent ports enabled by default
-- Ingress support (open MeshCentral inside the Home Assistant UI)
-- Data persisted in `/data/meshcentral` inside the add-on container
+- MPS, redirect, and relay ports enabled by default
+- Data persisted in `/share/meshcentral` (accessible from Home Assistant host)
 - Full MeshCentral `config.json` exposed as an add-on option
+- **Automatic updates**: GitHub Actions workflow checks for new MeshCentral versions daily and creates new releases automatically
 
 ### Installation
 
@@ -26,41 +26,53 @@ In the add-on options you have:
 - **Log level**: Controls add-on log verbosity.
 - **MeshCentral configuration (JSON)** (`meshcentral_config`):
   - Optional.
-  - If set, this string is written directly to:
-    - `/data/meshcentral/meshcentral-data/config.json`
-  - If left empty and no config exists yet, a default config is generated enabling:
-    - Web UI on port `80`
-    - MPS on `44330`
-    - Relay on `453`
-    - Agent on `1234`
+  - If set, this JSON string is validated and written to:
+    - `/share/meshcentral/meshcentral-data/config.json`
+  - If left empty and no config exists yet, a default config is generated with:
+    - HTTPS on port `44433`
+    - Redirect on port `44431`
+    - MPS on port `44432`
+    - Relay on port `453`
+    - Agent on port `1234`
+  - The script automatically ensures a valid `domains` section exists (adds default if missing)
 
 You can paste a full `config.json` from MeshCentral (for example a customized `sample-config-advanced.json`) into this field to control every aspect of the server.
 
 ### Ports
 
-Container ports exposed by the add-on:
+Container ports exposed by the add-on (mapped to same external ports):
 
-- `80/tcp` – MeshCentral HTTP web UI and API
-- `44330/tcp` – MeshCentral MPS (Intel AMT) port
-- `453/tcp` – MeshCentral relay port
-- `1234/tcp` – MeshCentral agent port
+- `44433/tcp` – MeshCentral HTTPS web UI and API (default: `44433`)
+- `44431/tcp` – MeshCentral redirect port (default: `44431`)
+- `44432/tcp` – MeshCentral MPS (Intel AMT) port (default: `44432`)
 
-In `config.yaml`:
-
-- `80/tcp` defaults to host port **`8877`**.
-- `44330/tcp`, `453/tcp`, `1234/tcp` are set to `null` so you can pick host ports in the add-on UI.
-
-You typically:
-
-- Use **ingress** to access MeshCentral from the Home Assistant sidebar.
-- Use **host ports** (e.g. `8877`, plus others you choose) for access from outside Home Assistant, such as through an external HAProxy or reverse proxy.
+You can change the external port mappings in the add-on configuration if needed. Access MeshCentral via `https://your-ha-ip:44433` or through your reverse proxy.
 
 ### Data persistence
 
 All MeshCentral data is stored under:
 
-- `/data/meshcentral/meshcentral-data`
-- `/data/meshcentral/meshcentral-files`
+- `/share/meshcentral/meshcentral-data` – Configuration and database
+- `/share/meshcentral/meshcentral-files` – User-uploaded files
+- `/share/meshcentral/meshcentral-backups` – Backup files
 
-These paths are on the Supervisor data volume, so your configuration and state survive add-on upgrades and container restarts.
+These paths are mapped to the Home Assistant host's share directory (typically `/mnt/data/supervisor/share/meshcentral`), so your configuration and state survive add-on upgrades and container restarts. You can access these files via SSH, Samba, or WinSCP.
+
+### Automatic Updates
+
+This repository includes a GitHub Actions workflow (`.github/workflows/auto-update.yml`) that:
+
+- Runs daily at 2 AM UTC (configurable in the workflow file)
+- Checks npm for the latest MeshCentral version
+- Compares it to the version in the Dockerfile
+- If a new version is available:
+  - Updates the Dockerfile with the new version
+  - Bumps the addon version (patch increment)
+  - Commits and pushes the changes
+  - Creates a new Git tag
+  - Home Assistant will detect the new addon version and show an update notification
+
+You can also manually trigger the workflow from the **Actions** tab in GitHub.
+
+**Note**: The workflow requires write permissions. Make sure your repository has Actions enabled and the `GITHUB_TOKEN` has write access (this is usually automatic for public repos).
 
