@@ -40,15 +40,17 @@ You can paste a full `config.json` from MeshCentral (for example a customized `s
 
 ### Ports
 
-The add-on uses MeshCentral's default ports internally:
+The add-on exposes MeshCentral's standard ports by default:
 
-- `443/tcp` – MeshCentral HTTPS web UI and API
-- `80/tcp` – MeshCentral HTTP redirect port
-- `44330/tcp` – MeshCentral MPS (Intel AMT) port
-- `453/tcp` – MeshCentral relay port
-- `1234/tcp` – MeshCentral agent port
+- `443/tcp` → `443` – MeshCentral HTTPS web UI and API
+- `80/tcp` → `80` – MeshCentral HTTP redirect port
+- `44330/tcp` → `44330` – MeshCentral MPS (Intel AMT) port
+- `453/tcp` → `453` – MeshCentral relay port
+- `1234/tcp` → `1234` – MeshCentral agent port
 
-**By default, these ports are not exposed externally** (set to `null` in the addon configuration). You can enable and map them to custom host ports in the add-on's **Network** configuration if you need external access. For most deployments, you'll access MeshCentral through a reverse proxy (like HAProxy) rather than exposing ports directly.
+You can change the external port mappings in the add-on's **Network** configuration if needed. The internal ports are configured in `config.json` (either via the default or your custom `meshcentral_config`).
+
+**Note**: If you already have a `config.json` with custom ports configured, the addon will continue using your existing configuration and won't overwrite it.
 
 ### Data persistence
 
