@@ -16,10 +16,14 @@ schema:
   log_level: list(trace|debug|info|notice|warning|error|fatal)?
   meshcentral_config: str?
 ports:
-  44433/tcp: 44433
-  44431/tcp: 44431
-  44432/tcp: 44432
+  443/tcp: 443
+  80/tcp: 80
+  44330/tcp: 44330
+  453/tcp: 453
+  1234/tcp: 1234
 ports_description:
-  44433/tcp: MeshCentral HTTPS port
-  44431/tcp: MeshCentral redirect port
-  44432/tcp: MeshCentral MPS port
+  443/tcp: MeshCentral HTTPS port
+  80/tcp: MeshCentral HTTP redirect port
+  44330/tcp: MeshCentral MPS port
+  453/tcp: MeshCentral relay port
+  1234/tcp: MeshCentral agent port
