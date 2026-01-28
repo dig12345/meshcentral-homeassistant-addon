@@ -28,10 +28,10 @@ In the add-on options you have:
   - Optional.
   - If set, this JSON string is validated and written to:
     - `/share/meshcentral/meshcentral-data/config.json`
-  - If left empty and no config exists yet, a default config is generated with:
-    - HTTPS on port `44433`
-    - Redirect on port `44431`
-    - MPS on port `44432`
+  - If left empty and no config exists yet, a default config is generated with MeshCentral's standard ports:
+    - HTTPS on port `443`
+    - HTTP redirect on port `80`
+    - MPS on port `44330`
     - Relay on port `453`
     - Agent on port `1234`
   - The script automatically ensures a valid `domains` section exists (adds default if missing)
@@ -40,13 +40,15 @@ You can paste a full `config.json` from MeshCentral (for example a customized `s
 
 ### Ports
 
-Container ports exposed by the add-on (mapped to same external ports):
+The add-on uses MeshCentral's default ports internally:
 
-- `44433/tcp` – MeshCentral HTTPS web UI and API (default: `44433`)
-- `44431/tcp` – MeshCentral redirect port (default: `44431`)
-- `44432/tcp` – MeshCentral MPS (Intel AMT) port (default: `44432`)
+- `443/tcp` – MeshCentral HTTPS web UI and API
+- `80/tcp` – MeshCentral HTTP redirect port
+- `44330/tcp` – MeshCentral MPS (Intel AMT) port
+- `453/tcp` – MeshCentral relay port
+- `1234/tcp` – MeshCentral agent port
 
-You can change the external port mappings in the add-on configuration if needed. Access MeshCentral via `https://your-ha-ip:44433` or through your reverse proxy.
+**By default, these ports are not exposed externally** (set to `null` in the addon configuration). You can enable and map them to custom host ports in the add-on's **Network** configuration if you need external access. For most deployments, you'll access MeshCentral through a reverse proxy (like HAProxy) rather than exposing ports directly.
 
 ### Data persistence
 

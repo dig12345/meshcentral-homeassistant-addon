@@ -73,10 +73,9 @@ if [ ! -s "/share/meshcentral/meshcentral-data/config.json" ] || bashio::var.has
     cat > /share/meshcentral/meshcentral-data/config.json <<EOF
 {
   "settings": {
-    "port": 44433,
-    "redirPort": 44431,
-    "exactPorts": true,
-    "mpsPort": 44432,
+    "port": 443,
+    "redirPort": 80,
+    "mpsPort": 44330,
     "relayPort": 453,
     "agentPort": 1234,
     "allowLoginToken": true,
