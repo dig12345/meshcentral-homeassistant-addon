@@ -1,6 +1,6 @@
 ## MeshCentral Home Assistant Add-on
 
-This is a Home Assistant add-on that runs a standalone MeshCentral server inside the Supervisor.
+A Home Assistant add-on that runs a standalone MeshCentral server inside the Supervisor.
 
 MeshCentral is a web-based remote monitoring and management solution that provides remote desktop, terminal, file access, Intel AMT support, and more.
 
@@ -8,35 +8,52 @@ MeshCentral is a web-based remote monitoring and management solution that provid
 
 - MeshCentral web UI served from the add-on
 - MPS, redirect, and relay ports enabled by default
-- Data persisted in `/share/meshcentral` (accessible from Home Assistant host)
-- Full MeshCentral `config.json` exposed as an add-on option
-- **Automatic updates**: GitHub Actions workflow checks for new MeshCentral versions daily and creates new releases automatically
+- Data persisted and accessible from Home Assistant host
+- Full MeshCentral `config.json` configuration support
+- Automatic updates when new MeshCentral versions are released
 
 ### Installation
 
-1. Push this `meshcentral` folder to its own Git repository.
-2. In Home Assistant, go to **Settings → Add-ons → Add-on Store → ⋮ → Repositories**.
-3. Add your Git repository URL as a **custom repository**.
-4. Find **MeshCentral** in the add-on list and install it.
+1. In Home Assistant, go to **Settings → Add-ons → Add-on Store → ⋮ → Repositories**.
+2. Add this repository URL as a **custom repository**:
+   ```
+   https://github.com/dig12345/meshcentral-homeassistant-addon
+   ```
+3. Find **MeshCentral** in the add-on list and click **Install**.
+4. Start the add-on and configure it as needed.
 
 ### Configuration
 
-In the add-on options you have:
+#### Basic Configuration
 
-- **Log level**: Controls add-on log verbosity.
-- **MeshCentral configuration (JSON)** (`meshcentral_config`):
-  - Optional.
-  - If set, this JSON string is validated and written to:
-    - `/share/meshcentral/meshcentral-data/config.json`
-  - If left empty and no config exists yet, a default config is generated with MeshCentral's standard ports:
-    - HTTPS on port `443`
-    - HTTP redirect on port `80`
-    - MPS on port `44330`
-    - Relay on port `453`
-    - Agent on port `1234`
-  - The script automatically ensures a valid `domains` section exists (adds default if missing)
+The add-on includes two configuration options:
 
-You can paste a full `config.json` from MeshCentral (for example a customized `sample-config-advanced.json`) into this field to control every aspect of the server.
+- **Log level**: Controls add-on log verbosity (trace, debug, info, notice, warning, error, fatal).
+- **MeshCentral configuration (JSON)**: Optional advanced configuration.
+
+#### Default Configuration
+
+If you don't provide a custom configuration, the add-on uses MeshCentral's standard ports:
+
+- HTTPS on port `443`
+- HTTP redirect on port `80`
+- MPS on port `44330`
+- Relay on port `453`
+- Agent on port `1234`
+
+#### Advanced Configuration
+
+You can provide a complete MeshCentral `config.json` in the **MeshCentral configuration (JSON)** field to customize:
+
+- Port numbers
+- SSL/TLS certificates
+- Domain settings
+- User account policies
+- And all other MeshCentral settings
+
+The add-on will validate your JSON and ensure required sections (like `domains`) are present. If you're migrating from an existing MeshCentral installation, you can paste your entire `config.json` here.
+
+**Note**: Once you've configured MeshCentral, your settings are preserved. The add-on will not overwrite your existing configuration on updates.
 
 ### Ports
 
@@ -48,35 +65,45 @@ The add-on exposes MeshCentral's standard ports by default:
 - `453/tcp` → `453` – MeshCentral relay port
 - `1234/tcp` → `1234` – MeshCentral agent port
 
-You can change the external port mappings in the add-on's **Network** configuration if needed. The internal ports are configured in `config.json` (either via the default or your custom `meshcentral_config`).
+You can change the external port mappings in the add-on's **Network** configuration tab if you need to use different ports or avoid conflicts with other services.
 
-**Note**: If you already have a `config.json` with custom ports configured, the addon will continue using your existing configuration and won't overwrite it.
+### Accessing MeshCentral
 
-### Data persistence
+After starting the add-on, access MeshCentral by:
 
-All MeshCentral data is stored under:
+1. Opening your browser to `https://your-home-assistant-ip:443`
+2. Or through your reverse proxy if configured
+3. Create your first administrator account when prompted
 
-- `/share/meshcentral/meshcentral-data` – Configuration and database
-- `/share/meshcentral/meshcentral-files` – User-uploaded files
-- `/share/meshcentral/meshcentral-backups` – Backup files
+### Data Storage
 
-These paths are mapped to the Home Assistant host's share directory (typically `/mnt/data/supervisor/share/meshcentral`), so your configuration and state survive add-on upgrades and container restarts. You can access these files via SSH, Samba, or WinSCP.
+All MeshCentral data is stored persistently and survives add-on updates and container restarts:
 
-### Automatic Updates
+- **Configuration and database**: `/share/meshcentral/meshcentral-data`
+- **User-uploaded files**: `/share/meshcentral/meshcentral-files`
+- **Backup files**: `/share/meshcentral/meshcentral-backups`
 
-This repository includes a GitHub Actions workflow (`.github/workflows/auto-update.yml`) that:
+These files are stored on your Home Assistant host and can be accessed via:
+- SSH
+- Samba (if enabled)
+- WinSCP or other SFTP clients
+- The typical path on the host is: `/mnt/data/supervisor/share/meshcentral`
 
-- Runs daily at 2 AM UTC (configurable in the workflow file)
-- Checks npm for the latest MeshCentral version
-- Compares it to the version in the Dockerfile
-- If a new version is available:
-  - Updates the Dockerfile with the new version
-  - Bumps the addon version (patch increment)
-  - Commits and pushes the changes
-  - Creates a new Git tag
-  - Home Assistant will detect the new addon version and show an update notification
+### Backups
 
-You can also manually trigger the workflow from the **Actions** tab in GitHub.
+Your MeshCentral data is stored in the Home Assistant share directory, which is typically included in Home Assistant backups. You can also use MeshCentral's built-in backup/restore functionality from the web UI.
 
-**Note**: The workflow requires write permissions. Make sure your repository has Actions enabled and the `GITHUB_TOKEN` has write access (this is usually automatic for public repos).
+### Updates
 
+The add-on automatically receives updates when new MeshCentral versions are released. You'll see update notifications in Home Assistant when a new version is available.
+
+### Support
+
+For issues, feature requests, or questions:
+- Check the [MeshCentral documentation](https://meshcentral.com/info/docs/)
+- Review the add-on logs in Home Assistant
+- Open an issue on the [GitHub repository](https://github.com/dig12345/meshcentral-homeassistant-addon)
+
+### License
+
+This add-on is provided as-is. MeshCentral is licensed under its own terms.
