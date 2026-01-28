@@ -92,7 +92,6 @@ if [ ! -s "/share/meshcentral/meshcentral-data/config.json" ]; then
     "redirPort": 80,
     "mpsPort": 44330,
     "relayPort": 453,
-    "agentPort": 1234,
     "allowLoginToken": true,
     "allowFraming": true,
     "agentPing": 60,
