@@ -38,30 +38,46 @@ if bashio::var.has_value "${meshcentral_config}"; then
     bashio::log.warning "meshcentral_config is empty or null, ignoring it"
     meshcentral_config=""
   else
-    bashio::log.info "Using custom MeshCentral configuration from addon option..."
-    # Validate JSON and ensure domains section exists using Node.js
-    VALIDATED_CONFIG=$(node -e "
-      const defaultDomains = JSON.parse(process.argv[2]);
-      try {
-        const config = JSON.parse(process.argv[1]);
-        if (!config.domains || typeof config.domains !== 'object') {
-          config.domains = defaultDomains;
-        }
-        console.log(JSON.stringify(config, null, 2));
-      } catch (e) {
-        console.error('Invalid JSON:', e.message);
-        process.exit(1);
-      }
-    " "${meshcentral_config}" "${DEFAULT_DOMAINS}" 2>&1)
-    VALIDATE_EXIT=$?
+    # Check if config file exists and content matches (skip validation if unchanged)
+    if [ -s "/share/meshcentral/meshcentral-data/config.json" ]; then
+      # Quick hash comparison to avoid expensive validation if unchanged
+      CONFIG_HASH=$(echo -n "${meshcentral_config}" | md5sum | cut -d' ' -f1)
+      if [ -f "/share/meshcentral/meshcentral-data/.config_hash" ]; then
+        STORED_HASH=$(cat "/share/meshcentral/meshcentral-data/.config_hash" 2>/dev/null || echo "")
+        if [ "${CONFIG_HASH}" == "${STORED_HASH}" ]; then
+          bashio::log.info "meshcentral_config unchanged, skipping validation"
+          meshcentral_config=""
+        fi
+      fi
+    fi
     
-    if [ ${VALIDATE_EXIT} -eq 0 ] && [ -n "${VALIDATED_CONFIG}" ]; then
-      echo "${VALIDATED_CONFIG}" > /share/meshcentral/meshcentral-data/config.json
-      bashio::log.info "Custom configuration validated and written successfully"
-    else
-      bashio::log.error "Invalid JSON in meshcentral_config option: ${VALIDATED_CONFIG}"
-      bashio::log.error "Keeping existing configuration (if any) instead of overwriting"
-      bashio::exit.nok "Invalid meshcentral_config JSON. Please check your configuration."
+    if bashio::var.has_value "${meshcentral_config}"; then
+      bashio::log.info "Validating and applying custom MeshCentral configuration..."
+      # Validate JSON and ensure domains section exists using Node.js
+      VALIDATED_CONFIG=$(node -e "
+        const defaultDomains = JSON.parse(process.argv[2]);
+        try {
+          const config = JSON.parse(process.argv[1]);
+          if (!config.domains || typeof config.domains !== 'object') {
+            config.domains = defaultDomains;
+          }
+          console.log(JSON.stringify(config, null, 2));
+        } catch (e) {
+          console.error('Invalid JSON:', e.message);
+          process.exit(1);
+        }
+      " "${meshcentral_config}" "${DEFAULT_DOMAINS}" 2>&1)
+      VALIDATE_EXIT=$?
+      
+      if [ ${VALIDATE_EXIT} -eq 0 ] && [ -n "${VALIDATED_CONFIG}" ]; then
+        echo "${VALIDATED_CONFIG}" > /share/meshcentral/meshcentral-data/config.json
+        echo -n "${CONFIG_HASH}" > /share/meshcentral/meshcentral-data/.config_hash
+        bashio::log.info "Custom configuration validated and written successfully"
+      else
+        bashio::log.error "Invalid JSON in meshcentral_config option: ${VALIDATED_CONFIG}"
+        bashio::log.error "Keeping existing configuration (if any) instead of overwriting"
+        bashio::exit.nok "Invalid meshcentral_config JSON. Please check your configuration."
+      fi
     fi
   fi
 fi
