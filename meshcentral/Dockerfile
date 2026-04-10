@@ -11,7 +11,7 @@ ENV \
     S6_SERVICES_GRACETIME=30000
 
 # Setup base
-ARG MESHCENTRAL_VERSION="1.1.56"
+ARG MESHCENTRAL_VERSION="1.1.58"
 # hadolint ignore=DL3003,SC2046
 RUN \
     apk add --no-cache \
