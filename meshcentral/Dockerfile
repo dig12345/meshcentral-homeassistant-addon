@@ -15,7 +15,7 @@ ARG MESHCENTRAL_VERSION="1.1.56"
 # hadolint ignore=DL3003,SC2046
 RUN \
     apk add --no-cache \
-        nodejs=22.22.0-r0 \
+        nodejs=22.22.2-r0 \
         npm=11.6.4-r0 \
     \
     && npm install -g meshcentral@${MESHCENTRAL_VERSION} \
@@ -34,8 +34,9 @@ RUN \
 # Copy root filesystem
 COPY rootfs /
 
-# Health check
-HEALTHCHECK CMD curl --fail http://127.0.0.1:80/ || exit 1
+# Health check - check HTTPS port (443) or HTTP redirect (80)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl --fail --max-time 5 http://127.0.0.1:80/ || exit 1
 
 # Build arguments
 ARG BUILD_ARCH
