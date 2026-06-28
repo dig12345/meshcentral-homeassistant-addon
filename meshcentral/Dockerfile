@@ -12,11 +12,14 @@ ENV \
 
 # Setup base
 ARG MESHCENTRAL_VERSION="1.2.1"
-# hadolint ignore=DL3003,SC2046
+# Node major version is fixed by the pinned base image's Alpine release (3.22 -> Node 22.x).
+# Patch versions are intentionally not pinned: Alpine only keeps the latest build in its
+# repos, so exact pins break the build on every upstream refresh.
+# hadolint ignore=DL3003,SC2046,DL3018
 RUN \
     apk add --no-cache \
-        nodejs=22.22.2-r0 \
-        npm=11.6.4-r0 \
+        nodejs \
+        npm \
     \
     && npm install -g meshcentral@${MESHCENTRAL_VERSION} \
     \
