@@ -97,6 +97,36 @@ Your MeshCentral data is stored in the Home Assistant share directory, which is 
 
 The add-on automatically receives updates when new MeshCentral versions are released. You'll see update notifications in Home Assistant when a new version is available.
 
+### Troubleshooting
+
+#### "Invalid origin in HTTP request, click to reconnect"
+
+This message comes from MeshCentral, not Home Assistant. MeshCentral checks the
+browser's `Origin` header against its TLS certificate name, and rejects the
+management WebSocket when they don't match — which happens whenever you reach the
+add-on by an IP address or hostname that differs from the auto-generated
+certificate name (the usual case for a Home Assistant add-on).
+
+New installs (add-on **0.1.28** and later) ship with `"allowedorigin": true` on
+the default domain, which disables this check. If you installed an earlier
+version, your existing `config.json` is preserved on update, so apply the fix
+manually:
+
+1. Edit `/share/meshcentral/meshcentral-data/config.json` (via the Samba, SSH, or
+   File Editor add-on).
+2. Add `"allowedorigin": true` to the default domain `""`:
+   ```json
+   "domains": {
+     "": {
+       "allowedorigin": true
+     }
+   }
+   ```
+3. Restart the MeshCentral add-on.
+
+Alternatively, restrict it to specific hostnames instead of disabling the check
+entirely, e.g. `"allowedorigin": "homeassistant.local,192.168.1.10"`.
+
 ### Support
 
 For issues, feature requests, or questions:

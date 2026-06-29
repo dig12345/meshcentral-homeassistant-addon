@@ -25,7 +25,12 @@ if ! bashio::fs.directory_exists "/share/meshcentral/meshcentral-backups"; then
 fi
 
 # Default domains configuration (always needed)
-DEFAULT_DOMAINS='{"": {"title": "MeshCentral", "minify": true, "newAccounts": true, "myServer": {"Backup": true, "Restore": true}}}'
+# "allowedorigin": true disables MeshCentral's WebSocket Origin check. Without it,
+# the management WebSocket (/control.ashx) is rejected with cause "invalidorigin"
+# ("Invalid origin in HTTP request, click to reconnect") whenever the add-on is
+# reached by an IP/hostname that differs from the auto-generated certificate
+# CommonName -- which is the normal case for a Home Assistant add-on.
+DEFAULT_DOMAINS='{"": {"title": "MeshCentral", "minify": true, "newAccounts": true, "allowedorigin": true, "myServer": {"Backup": true, "Restore": true}}}'
 
 # Check if custom config is provided via addon option
 declare meshcentral_config
@@ -104,6 +109,38 @@ if [ ! -s "/share/meshcentral/meshcentral-data/config.json" ]; then
 EOF
 else
   bashio::log.info "Using existing MeshCentral configuration..."
+fi
+
+# Backfill the "Invalid origin in HTTP request" fix into existing installs.
+# MeshCentral rejects the management WebSocket (cause "invalidorigin") when the
+# browser Origin hostname does not match the certificate name; "allowedorigin": true
+# on a domain disables that check. New configs get it from the default/option paths
+# above. This step runs against the final config.json regardless of how it was
+# produced, and adds the key to the default domain ("") only when it is absent --
+# an explicit "allowedorigin" of any value (including false) is left untouched, and
+# named domains are not modified. The file is rewritten only when something changed.
+if [ -s "/share/meshcentral/meshcentral-data/config.json" ]; then
+  NORMALIZE_RESULT=$(node -e '
+    const fs = require("fs");
+    const file = process.argv[1];
+    let config;
+    try { config = JSON.parse(fs.readFileSync(file, "utf8")); }
+    catch (e) { console.error(e.message); process.exit(1); }
+    const d = config.domains;
+    if (!d || typeof d !== "object" || !d[""] || typeof d[""] !== "object") { console.log("NOCHANGE"); process.exit(0); }
+    const hasKey = Object.keys(d[""]).some(function (k) { return k.toLowerCase() === "allowedorigin"; });
+    if (hasKey) { console.log("NOCHANGE"); process.exit(0); }
+    d[""].allowedorigin = true;
+    fs.writeFileSync(file, JSON.stringify(config, null, 2));
+    console.log("UPDATED");
+  ' "/share/meshcentral/meshcentral-data/config.json" 2>&1)
+  if [ $? -eq 0 ]; then
+    if [ "${NORMALIZE_RESULT}" == "UPDATED" ]; then
+      bashio::log.info 'Added "allowedorigin": true to the default domain to prevent "Invalid origin in HTTP request" errors'
+    fi
+  else
+    bashio::log.warning "Could not normalize config.json, leaving it unchanged: ${NORMALIZE_RESULT}"
+  fi
 fi
 
 # Set data directory
