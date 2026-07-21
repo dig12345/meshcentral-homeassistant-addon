@@ -11,7 +11,7 @@ ENV \
     S6_SERVICES_GRACETIME=30000
 
 # Setup base
-ARG MESHCENTRAL_VERSION="1.2.1"
+ARG MESHCENTRAL_VERSION="1.2.2"
 # Node major version is fixed by the pinned base image's Alpine release (3.22 -> Node 22.x).
 # Patch versions are intentionally not pinned: Alpine only keeps the latest build in its
 # repos, so exact pins break the build on every upstream refresh.
