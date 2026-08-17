@@ -87,7 +87,19 @@ jobs:
           echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
           echo "Bumped addon version to: ${NEW_VERSION}"
 
+      - name: Verify add-on image builds
+        id: build-check
+        if: steps.check-update.outputs.needs_update == 'true'
+        run: |
+          echo "Building the add-on image to verify the update before publishing..."
+          docker build \
+            --build-arg BUILD_FROM=ghcr.io/hassio-addons/base:19.0.0 \
+            --tag meshcentral-build-check:${{ steps.bump-version.outputs.new_version }} \
+            meshcentral
+          echo "Build succeeded; safe to publish."
+
       - name: Commit and push changes
+        id: commit
         if: steps.check-update.outputs.needs_update == 'true'
         run: |
           git add meshcentral/Dockerfile meshcentral/config.yaml
@@ -100,15 +112,21 @@ jobs:
       - name: Create summary
         if: always()
         run: |
-          if [ "${{ steps.check-update.outputs.needs_update }}" == "true" ]; then
-            echo "## ✅ Update Available" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check-update.outputs.needs_update }}" != "true" ]; then
+            echo "## ℹ️ No Update Needed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Already on latest MeshCentral version: ${{ steps.current-version.outputs.current }}" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.build-check.outcome }}" != "success" ]; then
+            echo "## ❌ Update Found, But Build Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**MeshCentral:** ${{ steps.current-version.outputs.current }} → ${{ steps.latest-version.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The add-on image did not build, so **nothing was committed or published**. Review the build logs above and fix the Dockerfile." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ✅ Update Published" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**MeshCentral:** ${{ steps.current-version.outputs.current }} → ${{ steps.latest-version.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
             echo "**Addon:** ${{ steps.addon-version.outputs.current_addon }} → ${{ steps.bump-version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Changes have been committed and pushed." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "## ℹ️ No Update Needed" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Already on latest MeshCentral version: ${{ steps.current-version.outputs.current }}" >> $GITHUB_STEP_SUMMARY
+            echo "Build verified, changes committed and pushed." >> $GITHUB_STEP_SUMMARY
           fi

@@ -99,6 +99,32 @@ The add-on automatically receives updates when new MeshCentral versions are rele
 
 ### Troubleshooting
 
+#### "Unable to install required modules" / the add-on restarts over and over
+
+Symptom — the log repeats every second or so, and the add-on never comes up:
+
+```
+Installing modules [ 'ua-client-hints-js@0.1.2', 'otplib@13.4.1' ]
+ERROR: Unable to install required modules. MeshCentral may not have access to npm...
+INFO: Service MeshCentral exited with code 0 (by signal 0)
+INFO: Starting MeshCentral...
+```
+
+MeshCentral re-checks its pinned Node modules on every start and runs `npm
+install` for anything it finds missing. In add-on versions up to **0.1.31** the
+image build deleted `/usr/lib/node_modules` to save space — which is where the
+Alpine `npm` package itself lives, so that install could never succeed.
+MeshCentral then exited with status `0`, which the supervision tree reads as a
+clean exit and restarts, forever, without ever marking the add-on as failed.
+
+Add-on **0.1.32** and later fix this three ways: `npm` stays in the image, the
+pinned modules are installed and verified at build time so nothing has to be
+fetched at start, and an immediate exit is now reported and stops the add-on
+instead of looping silently.
+
+Update the add-on to 0.1.32 or later. If you are building the add-on locally,
+rebuild it (uninstall and reinstall) so the new image is produced.
+
 #### "Invalid origin in HTTP request, click to reconnect"
 
 This message comes from MeshCentral, not Home Assistant. MeshCentral checks the

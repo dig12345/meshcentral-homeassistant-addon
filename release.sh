@@ -44,8 +44,11 @@ echo "Updated version line in ${CONFIG_FILE}:"
 grep -E '^version:' "${CONFIG_FILE}"
 
 # Commit and tag
-git -C "${REPO_ROOT}" add "${CONFIG_FILE}" \
-  "${REPO_ROOT}/meshcentral/rootfs/etc/s6-overlay/s6-rc.d/meshcentral/run"
+# Stage the whole add-on directory: releases regularly touch the Dockerfile and
+# the s6 scripts as well, and an allowlist of individual files silently leaves
+# those out of the release commit.
+git -C "${REPO_ROOT}" add "${REPO_ROOT}/meshcentral" \
+  "${REPO_ROOT}/README.md"
 git -C "${REPO_ROOT}" commit -m "Release MeshCentral add-on ${NEW_VERSION}"
 git -C "${REPO_ROOT}" tag "v${NEW_VERSION}"
 

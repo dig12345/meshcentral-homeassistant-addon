@@ -10,11 +10,27 @@ ENV \
     S6_KILL_GRACETIME=30000 \
     S6_SERVICES_GRACETIME=30000
 
+# The module verifier is needed during the build below as well as at runtime, so
+# it is copied ahead of the full root filesystem.
+COPY rootfs/usr/local/bin/meshcentral-verify-modules.js /usr/local/bin/meshcentral-verify-modules.js
+
 # Setup base
 ARG MESHCENTRAL_VERSION="1.2.5"
 # Node major version is fixed by the pinned base image's Alpine release (3.22 -> Node 22.x).
 # Patch versions are intentionally not pinned: Alpine only keeps the latest build in its
 # repos, so exact pins break the build on every upstream refresh.
+#
+# MeshCentral re-checks its pinned module list on every start and shells out to
+# "npm install" for anything it thinks is missing, so the image has to ship a
+# complete set: the second "npm install" installs MeshCentral's pinned
+# dependencies explicitly and the verifier fails the build if any of them is
+# still missing or at the wrong version.
+#
+# NOTE: /usr/lib/node_modules is deliberately NOT deleted here -- that is where
+# the Alpine npm package itself lives (/usr/bin/npm symlinks into it; global
+# installs go to /usr/local instead). Deleting it leaves MeshCentral unable to
+# install any module it wants at runtime, and MeshCentral exits with status 0
+# when that fails, which s6 turns into a silent add-on restart loop.
 # hadolint ignore=DL3003,SC2046,DL3018
 RUN \
     apk add --no-cache \
@@ -22,6 +38,11 @@ RUN \
         npm \
     \
     && npm install -g meshcentral@${MESHCENTRAL_VERSION} \
+    \
+    && cd /usr/local/lib/node_modules/meshcentral \
+    && npm install --no-audit --no-fund --omit=optional --save-exact \
+        $(node -e 'const d=require("./package.json").dependencies||{};console.log(Object.keys(d).map(function(k){return k+"@"+d[k];}).join(" "));') \
+    && node /usr/local/bin/meshcentral-verify-modules.js \
     \
     && rm -f -r \
         /root/.cache \
@@ -31,7 +52,6 @@ RUN \
         /root/.npm \
         /tmp/.[!.]* \
         /tmp/* \
-        /usr/lib/node_modules \
         /usr/local/share/.cache
 
 # Copy root filesystem

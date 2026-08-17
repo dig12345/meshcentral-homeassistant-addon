@@ -150,4 +150,38 @@ export MESHCENTRAL_FILES="/share/meshcentral/meshcentral-files"
 cd /usr/local/lib/node_modules/meshcentral \
     || bashio::exit.nok "Could not change directory to MeshCentral"
 
+# Make sure MeshCentral's pinned modules are all installed before handing over.
+# MeshCentral checks them itself on every start and shells out to "npm install"
+# for anything it considers missing; if that install fails it prints
+# "Unable to install required modules" and exits with status 0, which s6 reads as
+# a clean exit and restarts -- a crash loop with no failed state to notice. The
+# image ships a complete set, so a failure here means the install was damaged.
+declare verify_output
+declare verify_status
+verify_output=$(node /usr/local/bin/meshcentral-verify-modules.js 2>&1)
+verify_status=$?
+
+if [ ${verify_status} -eq 2 ]; then
+  bashio::exit.nok "Could not check the MeshCentral installation: ${verify_output}"
+elif [ ${verify_status} -ne 0 ]; then
+  bashio::log.warning "MeshCentral modules missing: ${verify_output//$'\n'/ }"
+  bashio::log.warning "Installing them now, this requires internet access..."
+
+  # shellcheck disable=SC2086
+  npm install --no-audit --no-fund --omit=optional --save-exact ${verify_output} \
+    || bashio::log.error "npm could not install the missing modules."
+
+  verify_output=$(node /usr/local/bin/meshcentral-verify-modules.js 2>&1)
+  if [ $? -ne 0 ]; then
+    bashio::log.error "MeshCentral is still missing: ${verify_output//$'\n'/ }"
+    bashio::log.error "Rebuild the add-on (uninstall and reinstall it) to restore them."
+    bashio::exit.nok "Refusing to start MeshCentral with an incomplete installation"
+  fi
+  bashio::log.info "Missing modules installed successfully"
+fi
+
+# Recorded for the finish script, which uses it to tell a real run apart from an
+# immediate exit (MeshCentral exits with status 0 on several fatal start paths).
+date +%s > /run/meshcentral.start
+
 exec node meshcentral.js --datapath /share/meshcentral/meshcentral-data

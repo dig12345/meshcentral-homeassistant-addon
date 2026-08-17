@@ -14,6 +14,47 @@ bashio::log.info \
   "Service ${service} exited with code ${exit_code_service}" \
   "(by signal ${exit_code_signal})"
 
+# MeshCentral calls process.exit() with status 0 on several fatal start-up paths
+# (a module it cannot install, an unusable config.json). S6 reads that as a clean
+# exit and restarts the service, so the add-on flaps forever without ever
+# reporting a failure. Count how often it exits before it could plausibly have
+# started serving, and take the add-on down once that keeps happening, so the
+# reason stays visible at the end of the log.
+readonly minimum_runtime=15
+readonly maximum_fast_exits=3
+readonly start_file="/run/meshcentral.start"
+readonly fast_exit_file="/run/meshcentral.fastexits"
+
+if [[ "${exit_code_service}" -eq 0 ]] && [[ -f "${start_file}" ]]; then
+  declare runtime
+  runtime=$(( $(date +%s) - $(<"${start_file}") ))
+
+  if [[ "${runtime}" -lt "${minimum_runtime}" ]]; then
+    declare fast_exits
+    fast_exits=$(( $(cat "${fast_exit_file}" 2>/dev/null || echo 0) + 1 ))
+    echo "${fast_exits}" > "${fast_exit_file}"
+
+    bashio::log.warning \
+      "${service} exited after ${runtime}s without being asked to stop" \
+      "(${fast_exits}/${maximum_fast_exits}), see the error above."
+
+    if [[ "${fast_exits}" -ge "${maximum_fast_exits}" ]]; then
+      bashio::log.error \
+        "${service} keeps failing to start; stopping the add-on instead of" \
+        "restarting it in a loop. Fix the error reported above and start it again."
+      if [[ "${exit_code_container}" -eq 0 ]]; then
+        echo 1 > /run/s6-linux-init-container-results/exitcode
+      fi
+      exec /run/s6/basedir/bin/halt
+    fi
+
+    # Slow the restarts down so the log stays readable.
+    sleep 3
+  else
+    rm -f "${fast_exit_file}"
+  fi
+fi
+
 if [[ "${exit_code_service}" -eq 256 ]]; then
   if [[ "${exit_code_container}" -eq 0 ]]; then
     echo $((128 + $exit_code_signal)) > /run/s6-linux-init-container-results/exitcode
