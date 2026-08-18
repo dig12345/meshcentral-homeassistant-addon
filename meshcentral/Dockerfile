@@ -20,29 +20,38 @@ ARG MESHCENTRAL_VERSION="1.2.5"
 # Patch versions are intentionally not pinned: Alpine only keeps the latest build in its
 # repos, so exact pins break the build on every upstream refresh.
 #
-# MeshCentral re-checks its pinned module list on every start and shells out to
-# "npm install" for anything it thinks is missing, so the image has to ship a
-# complete set: the second "npm install" installs MeshCentral's pinned
-# dependencies explicitly and the verifier fails the build if any of them is
-# still missing or at the wrong version.
+# MeshCentral is installed as a dependency of a real npm project rather than
+# with "npm install -g". It re-checks its pinned module list on every start and
+# runs "npm install" from the directory above its own node_modules for anything
+# it thinks is missing. With a global install that directory (/usr/local/lib) is
+# not an npm project, so npm treats MeshCentral itself as extraneous and deletes
+# it mid-run -- the server then dies on "Cannot find module './exeHandler.js'".
+# Inside a project that lists meshcentral as a dependency, the same install is
+# harmless and does what MeshCentral intended.
+#
+# The pinned dependencies are then installed explicitly and verified, so nothing
+# has to be fetched at start. The verifier exits 3 when everything is present but
+# MeshCentral's own check would still reinstall it; that is reported rather than
+# failing the build, since it is no longer fatal.
 #
 # NOTE: /usr/lib/node_modules is deliberately NOT deleted here -- that is where
-# the Alpine npm package itself lives (/usr/bin/npm symlinks into it; global
-# installs go to /usr/local instead). Deleting it leaves MeshCentral unable to
-# install any module it wants at runtime, and MeshCentral exits with status 0
-# when that fails, which s6 turns into a silent add-on restart loop.
+# the Alpine npm package itself lives (/usr/bin/npm symlinks into it). Deleting
+# it leaves MeshCentral unable to install any module it wants at runtime, and it
+# exits with status 0 when that fails, which s6 turns into a silent restart loop.
 # hadolint ignore=DL3003,SC2046,DL3018
 RUN \
     apk add --no-cache \
         nodejs \
         npm \
     \
-    && npm install -g meshcentral@${MESHCENTRAL_VERSION} \
+    && mkdir -p /opt/meshcentral \
+    && cd /opt/meshcentral \
+    && printf '%s' '{"name":"meshcentral-addon","version":"1.0.0","private":true,"dependencies":{}}' > package.json \
+    && npm install --no-audit --no-fund --save-exact meshcentral@${MESHCENTRAL_VERSION} \
     \
-    && cd /usr/local/lib/node_modules/meshcentral \
     && npm install --no-audit --no-fund --omit=optional --save-exact \
-        $(node -e 'const d=require("./package.json").dependencies||{};console.log(Object.keys(d).map(function(k){return k+"@"+d[k];}).join(" "));') \
-    && node /usr/local/bin/meshcentral-verify-modules.js \
+        $(node -e 'const d=require("/opt/meshcentral/node_modules/meshcentral/package.json").dependencies||{};console.log(Object.keys(d).map(function(k){return k+"@"+d[k];}).join(" "));') \
+    && { node /usr/local/bin/meshcentral-verify-modules.js || [ "$?" -eq 3 ]; } \
     \
     && rm -f -r \
         /root/.cache \

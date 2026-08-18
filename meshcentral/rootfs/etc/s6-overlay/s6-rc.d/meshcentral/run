@@ -147,7 +147,12 @@ fi
 export MESHCENTRAL_DATA="/share/meshcentral/meshcentral-data"
 export MESHCENTRAL_FILES="/share/meshcentral/meshcentral-files"
 
-cd /usr/local/lib/node_modules/meshcentral \
+# MeshCentral is installed as a dependency of the /opt/meshcentral npm project
+# rather than globally; see the Dockerfile for why that matters.
+meshcentral_home="/opt/meshcentral"
+meshcentral_app="${meshcentral_home}/node_modules/meshcentral"
+
+cd "${meshcentral_app}" \
     || bashio::exit.nok "Could not change directory to MeshCentral"
 
 # Make sure MeshCentral's pinned modules are all installed before handing over.
@@ -158,21 +163,41 @@ cd /usr/local/lib/node_modules/meshcentral \
 # image ships a complete set, so a failure here means the install was damaged.
 declare verify_output
 declare verify_status
-verify_output=$(node /usr/local/bin/meshcentral-verify-modules.js 2>&1)
+verify_output=$(node /usr/local/bin/meshcentral-verify-modules.js "${meshcentral_app}" 2>&1)
 verify_status=$?
 
 if [ ${verify_status} -eq 2 ]; then
   bashio::exit.nok "Could not check the MeshCentral installation: ${verify_output}"
+elif [ ${verify_status} -eq 3 ]; then
+  # Everything is on disk, but MeshCentral's own check disagrees and will
+  # reinstall those modules before starting. That is harmless here -- the
+  # install runs inside the /opt/meshcentral project -- but log what its check
+  # saw, since it costs a registry round trip on every start.
+  bashio::log.warning "MeshCentral will reinstall modules it already has:"
+  while IFS= read -r line; do
+    bashio::log.warning "  ${line}"
+  done <<< "${verify_output}"
 elif [ ${verify_status} -ne 0 ]; then
+  # Status 1 means "these modules are missing", one name@version per line. Node
+  # itself also exits 1 when it cannot run the script at all, so make sure the
+  # output really is a module list before handing it to npm.
+  if [ ${verify_status} -ne 1 ] \
+    || ! grep -qE '^@?[A-Za-z0-9._/-]+@[0-9]' <<< "${verify_output}" \
+    || grep -qvE '^@?[A-Za-z0-9._/-]+@[0-9][A-Za-z0-9.+-]*$' <<< "${verify_output}"; then
+    bashio::exit.nok "Could not check the MeshCentral installation: ${verify_output}"
+  fi
+
   bashio::log.warning "MeshCentral modules missing: ${verify_output//$'\n'/ }"
   bashio::log.warning "Installing them now, this requires internet access..."
 
+  # Run from the project root, the way MeshCentral itself would.
   # shellcheck disable=SC2086
-  npm install --no-audit --no-fund --omit=optional --save-exact ${verify_output} \
+  (cd "${meshcentral_home}" && npm install --no-audit --no-fund --omit=optional --save-exact ${verify_output}) \
     || bashio::log.error "npm could not install the missing modules."
 
-  verify_output=$(node /usr/local/bin/meshcentral-verify-modules.js 2>&1)
-  if [ $? -ne 0 ]; then
+  verify_output=$(node /usr/local/bin/meshcentral-verify-modules.js "${meshcentral_app}" 2>&1)
+  verify_status=$?
+  if [ ${verify_status} -eq 1 ] || [ ${verify_status} -eq 2 ]; then
     bashio::log.error "MeshCentral is still missing: ${verify_output//$'\n'/ }"
     bashio::log.error "Rebuild the add-on (uninstall and reinstall it) to restore them."
     bashio::exit.nok "Refusing to start MeshCentral with an incomplete installation"
